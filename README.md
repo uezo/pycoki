@@ -20,6 +20,9 @@ $ pip install git+https://github.com/uezo/pycoki
 Just `pycoki.start()` then you can get/set data. The backend DB is SQLite by default.
 
 ```python
+# Import Pycoki
+import pycoki
+
 # Start Pycoki
 p = pycoki.start("test.db", init_table=True)   #init_table is required for the first access to create data table
 
@@ -69,6 +72,10 @@ Switch the backend database to MySQL.
 To use this feature `MySQLdb` is required.
 
 ```python
+# Import Pycoki and MySQL extension
+import pycoki
+from pycoki.mysql import MySQLKeyValueStore
+
 # Start Pycoki
 mysql_conn_str = "host=localhost;user=root;passwd=;db=pycokidb;charset=utf8;"
 # p = pycoki.start(mysql_conn_str, kvsclass=MySQLKeyValueStore)
@@ -93,6 +100,10 @@ Switch the backend database to SQL Server / Azure SQL Database.
 To use this feature `pyodbc` is required.
 
 ```python
+# Import Pycoki and SQLDatabase extension
+import pycoki
+from pycoki.sqldb import SQLDBKeyValueStore
+
 # Start Pycoki
 sqldb_conn_str = "DRIVER={ODBC Driver 13 for SQL Server};SERVER=******.database.windows.net;PORT=1433;DATABASE=******;UID=******;PWD=******"
 # p = pycoki.start(sqldb_conn_str, kvsclass=SQLDBKeyValueStore)
