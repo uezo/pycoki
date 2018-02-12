@@ -4,7 +4,7 @@ Python Compatible Key-value-store Interface for databases
 
 ## Features
 - Simple and Easy: Focused on just getting/setting value(s) with a few preparations(serialization, encoding...) and configurations
-- Compatibility: Same application interface when SQLite(default), MySQL, SQLServer and any other RDBMS is used for backend
+- Compatibility: Same application interface when SQLite(default), MySQL, SQLServer, PostgreSQL and any other RDBMS is used for backend
 - All data in one table: Same key for different values by using namespace(collection names, categories...)
 
 ## Installation
@@ -68,8 +68,7 @@ value4
 
 ## Use MySQL
 
-Switch the backend database to MySQL.
-To use this feature `MySQLdb` is required.
+Switch the backend database to MySQL. To use this feature `MySQLdb` is required.
 
 ```python
 # Import Pycoki and MySQL extension
@@ -96,8 +95,7 @@ Hello MySQL!
 
 ## Use SQL Server / Azure SQL Database
 
-Switch the backend database to SQL Server / Azure SQL Database.
-To use this feature `pyodbc` is required.
+Switch the backend database to SQL Server / Azure SQL Database. To use this feature `pyodbc` is required.
 
 ```python
 # Import Pycoki and SQLDatabase extension
@@ -119,5 +117,33 @@ p.close()
 
 ```
 Hello SQL Server!
+```
+
+
+## Use PostgreSQL
+
+Switch the backend database to PostgreSQL. To use this feature `psycopg2` is required.
+
+```python
+# Import Pycoki and SQLDatabase extension
+import pycoki
+from pycoki.pgsql import PgSQLKeyValueStore
+
+# Start Pycoki
+pgsql_conn_str = "postgresql://username:password@hostname:port/pycokidb"
+
+# p = pycoki.start(pgsql_conn_str, kvsclass=PgSQLKeyValueStore)
+p = pycoki.start(pgsql_conn_str, kvsclass=PgSQLKeyValueStore, init_table=True)  #First access
+
+# Set and get data
+p.set("key1", "Hello PostgreSQL!")
+print(p.get("key1"))
+
+# Finish Pycoki
+p.close()
+```
+
+```
+Hello PostgreSQL!
 ```
 
