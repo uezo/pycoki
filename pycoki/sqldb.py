@@ -5,10 +5,6 @@ import pyodbc
 
 class SQLDBKeyValueStore(KeyValueStore):
     @staticmethod
-    def serialize_date(dt):
-        return dt
-
-    @staticmethod
     def get_connection(connection_str):
         """Get connection by given connection string
 
@@ -31,8 +27,8 @@ class SQLDBKeyValueStore(KeyValueStore):
         cols = [cd[0] for cd in row.cursor_description]
         return {
             "key": None if not "kv_key" in cols else row[cols.index("kv_key")],
-            "value": None if not "value" in cols else row[cols.index("value")],
-            "namespace": None if not "namespace" in cols else row[cols.index("namespace")],
+            "value": None if not "kv_value" in cols else row[cols.index("kv_value")],
+            "namespace": None if not "kv_namespace" in cols else row[cols.index("kv_namespace")],
         }
 
     @staticmethod
@@ -67,19 +63,19 @@ class SQLDBKeyValueStore(KeyValueStore):
         """
         return {
             "prepare_check": "select id from dbo.sysobjects where id = object_id('{0}')".format(table_name),
-            "prepare_create": "create table {0} (namespace NVARCHAR(50), kv_key NVARCHAR(100), value NVARCHAR(4000), timestamp DATETIME2, primary key(namespace, kv_key))".format(table_name),
-            "get": "select value from {0} where namespace=? and kv_key=?".format(table_name),
-            "get_all": "select kv_key, value from {0} where namespace=?".format(table_name),
-            "keys": "select kv_key from {0} where namespace=?".format(table_name),
+            "prepare_create": "create table {0} (kv_namespace NVARCHAR(50), kv_key NVARCHAR(100), kv_value NVARCHAR(4000), kv_timestamp DATETIME2, primary key(kv_namespace, kv_key))".format(table_name),
+            "get": "select kv_value from {0} where kv_namespace=? and kv_key=?".format(table_name),
+            "get_all": "select kv_key, kv_value from {0} where kv_namespace=?".format(table_name),
+            "keys": "select kv_key from {0} where kv_namespace=?".format(table_name),
             "set": """
                     merge into {0} as A
-                    using (select ? as namespace, ? as kv_key, ? as value, ? as timestamp) as B
-                    on (A.namespace = B.namespace and A.kv_key = B.kv_key)
+                    using (select ? as kv_namespace, ? as kv_key, ? as kv_value, ? as kv_timestamp) as B
+                    on (A.kv_namespace = B.kv_namespace and A.kv_key = B.kv_key)
                     when matched then
-                    update set value=B.value, timestamp=B.timestamp
+                    update set kv_value=B.kv_value, kv_timestamp=B.kv_timestamp
                     when not matched then 
-                    insert (namespace, kv_key, value, timestamp) values (B.namespace, B.kv_key, B.value, B.timestamp);
+                    insert (kv_namespace, kv_key, kv_value, kv_timestamp) values (B.kv_namespace, B.kv_key, B.kv_value, B.kv_timestamp);
                     """.format(table_name),
-            "remove": "delete from {0} where namespace=? and kv_key=?".format(table_name),
-            "remove_all": "delete from {0} where namespace=?".format(table_name),
+            "remove": "delete from {0} where kv_namespace=? and kv_key=?".format(table_name),
+            "remove_all": "delete from {0} where kv_namespace=?".format(table_name),
         }

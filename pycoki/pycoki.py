@@ -168,7 +168,7 @@ class KeyValueStore:
         try:
             serialized_value = "" if not value else json.dumps(value, cls=DateTimeJSONEncoder)
             cursor = conn.cursor()
-            cursor.execute(self.sqls["set"], (ns, key, serialized_value, self.serialize_date(datetime.now(self.timezone))))
+            cursor.execute(self.sqls["set"], self.edit_params(ns, key, serialized_value, datetime.now(self.timezone)))
             conn.commit()
             return True
         except Exception as ex:
@@ -209,19 +209,77 @@ class KeyValueStore:
         return False
 
     @staticmethod
-    def serialize_date(dt):
-        """Convert datetime into str to store text field in SQLite
+    def edit_params(namespace, key, value, timestamp):
+        """Edit SQL params
 
-        :param dt: Datetime
-        :type dt: datetime
-        :return: Datetime string
-        :rtype: str
+        :param namespace: Namespace of Key-Value
+        :type namespace: str
+        :param key: Key
+        :type key: str
+        :param value: Value
+        :type value: str
+        :param timestamp: Timestamp
+        :type timestamp: datetime
+        :return: params
+        :rtype: tuple
         """
-        if dt.tzinfo:
-            return dt.strftime("%Y-%m-%d %H:%M:%S %z")
-        else:
-            return dt.strftime("%Y-%m-%d %H:%M:%S")
-    
+        return (namespace, key, value, timestamp)
+
+    @staticmethod
+    def get_connection(connection_str):
+        """Get connection by given connection string
+
+        :param connection_str: Connection string
+        :type connection_str: str
+        :return: Connection
+        :rtype: Connection
+        """
+        return None
+
+    @staticmethod
+    def map_record(row):
+        """Map data from record to dict
+
+        :param row: A row of record set
+        :type row: sqlite3.Row
+        :return: Record
+        :rtype: dict
+        """
+        return {
+            "key": None if not "kv_key" in row else row["kv_key"],
+            "value": None if not "kv_value" in row else row["kv_value"],
+            "namespace": None if not "kv_namespace" in row else row["kv_namespace"],
+        }
+
+    @staticmethod
+    def get_sqls(table_name):
+        """Get dictionary of SQLs called in methods of KeyValueStore
+
+        :param table_name: Key-Value store table
+        :type table_name: str
+        :return: Dictionary of SQL
+        :rtype: dict
+        """
+        return {}
+
+class SQLiteKeyValueStore(KeyValueStore):
+    @staticmethod
+    def edit_params(namespace, key, value, timestamp):
+        """Edit SQL params
+
+        :param namespace: Namespace of Key-Value
+        :type namespace: str
+        :param key: Key
+        :type key: str
+        :param value: Value
+        :type value: str
+        :param timestamp: Timestamp
+        :type timestamp: datetime
+        :return: params
+        :rtype: tuple
+        """
+        return (namespace, key, value, timestamp.strftime("%Y-%m-%d %H:%M:%S %z") if timestamp.tzinfo else timestamp.strftime("%Y-%m-%d %H:%M:%S"))
+
     @staticmethod
     def get_connection(connection_str):
         """Get connection by given connection string
@@ -246,9 +304,9 @@ class KeyValueStore:
         """
         cols = row.keys()
         return {
-            "key": None if not "key" in cols else row["key"],
-            "value": None if not "value" in cols else row["value"],
-            "namespace": None if not "namespace" in cols else row["namespace"],
+            "key": None if not "kv_key" in cols else row["kv_key"],
+            "value": None if not "kv_value" in cols else row["kv_value"],
+            "namespace": None if not "kv_namespace" in cols else row["kv_namespace"],
         }
 
     @staticmethod
@@ -262,14 +320,15 @@ class KeyValueStore:
         """
         return {
             "prepare_check": "select * from sqlite_master where type='table' and name='{0}'".format(table_name),
-            "prepare_create": "create table {0} (namespace TEXT, key TEXT, value TEXT, timestamp TEXT, primary key(namespace, key))".format(table_name),
-            "get": "select value from {0} where namespace=? and key=?".format(table_name),
-            "get_all": "select key, value from {0} where namespace=?".format(table_name),
-            "keys": "select key from {0} where namespace=?".format(table_name),
-            "set": "replace into {0} (namespace, key, value, timestamp) values (?,?,?,?)".format(table_name),
-            "remove": "delete from {0} where namespace=? and key=?".format(table_name),
-            "remove_all": "delete from {0} where namespace=?".format(table_name),
+            "prepare_create": "create table {0} (kv_namespace TEXT, kv_key TEXT, kv_value TEXT, kv_timestamp TEXT, primary key(kv_namespace, kv_key))".format(table_name),
+            "get": "select kv_value from {0} where kv_namespace=? and kv_key=?".format(table_name),
+            "get_all": "select kv_key, kv_value from {0} where kv_namespace=?".format(table_name),
+            "keys": "select kv_key from {0} where kv_namespace=?".format(table_name),
+            "set": "replace into {0} (kv_namespace, kv_key, kv_value, kv_timestamp) values (?,?,?,?)".format(table_name),
+            "remove": "delete from {0} where kv_namespace=? and kv_key=?".format(table_name),
+            "remove_all": "delete from {0} where kv_namespace=?".format(table_name),
         }
+
 
 def start(connection_str=None, namespace=None, logger=None, tzone=None, connection=None, table_name=None, init_table=False, init_params=tuple(), kvsclass=None):
     """Get a new instance of KVS
@@ -291,7 +350,7 @@ def start(connection_str=None, namespace=None, logger=None, tzone=None, connecti
     :return: Instance of KeyValueStore
     :rtype: KeyValueStore
     """
-    cls = kvsclass if kvsclass else KeyValueStore
+    cls = kvsclass if kvsclass else SQLiteKeyValueStore
     ret = cls(
         namespace=namespace if namespace else "__",
         logger=logger if logger else logging.getLogger(__name__),
@@ -315,7 +374,7 @@ def get(key=None, namespace=None, connection_str=None, kvsclass=None):
     :type connection_str: str
     :return: Value or all values in namespace
     """
-    cls = kvsclass if kvsclass else KeyValueStore
+    cls = kvsclass if kvsclass else SQLiteKeyValueStore
     try:
         temp = start(connection_str=connection_str if connection_str else DEFAULT_CONNECTION_STR, init_table=True, kvsclass=cls)
         return temp.get(key=key, namespace=namespace)
@@ -336,7 +395,7 @@ def set(key, value, namespace=None, connection_str=None, kvsclass=None):
     :return: Result
     :rtype: bool
     """
-    cls = kvsclass if kvsclass else KeyValueStore
+    cls = kvsclass if kvsclass else SQLiteKeyValueStore
     try:
         temp = start(connection_str=connection_str if connection_str else DEFAULT_CONNECTION_STR, init_table=True, kvsclass=cls)
         return temp.set(key=key, value=value, namespace=namespace)
