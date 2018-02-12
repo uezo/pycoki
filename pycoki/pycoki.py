@@ -363,7 +363,7 @@ def start(connection_str=None, namespace=None, logger=None, tzone=None, connecti
         ret.init_table(query_params=init_params)
     return ret
 
-def get(key=None, namespace=None, connection_str=None, kvsclass=None):
+def get(key=None, namespace=None, connection_str=None, init_table=True, init_params=tuple(), kvsclass=None):
     """Getter without instancing
 
     :param key: Key
@@ -376,12 +376,12 @@ def get(key=None, namespace=None, connection_str=None, kvsclass=None):
     """
     cls = kvsclass if kvsclass else SQLiteKeyValueStore
     try:
-        temp = start(connection_str=connection_str if connection_str else DEFAULT_CONNECTION_STR, init_table=True, kvsclass=cls)
+        temp = start(connection_str=connection_str if connection_str else DEFAULT_CONNECTION_STR, init_table=init_table, init_params=init_params, kvsclass=cls)
         return temp.get(key=key, namespace=namespace)
     finally:
         temp.close()
 
-def set(key, value, namespace=None, connection_str=None, kvsclass=None):
+def set(key, value, namespace=None, connection_str=None, init_table=True, init_params=tuple(), kvsclass=None):
     """Setter without instancing
 
     :param key: Key
@@ -397,7 +397,7 @@ def set(key, value, namespace=None, connection_str=None, kvsclass=None):
     """
     cls = kvsclass if kvsclass else SQLiteKeyValueStore
     try:
-        temp = start(connection_str=connection_str if connection_str else DEFAULT_CONNECTION_STR, init_table=True, kvsclass=cls)
+        temp = start(connection_str=connection_str if connection_str else DEFAULT_CONNECTION_STR, init_table=init_table, init_params=init_params, kvsclass=cls)
         return temp.set(key=key, value=value, namespace=namespace)
     finally:
         temp.close()
